@@ -152,6 +152,52 @@ HMatrix<T>::HMatrix(ClusterTree* _rows, ClusterTree* _cols, const hmat::MatrixSe
       }
     }
   }
+
+  // After children have been created, check if Rk leaves should be merged.
+  // We want to merge only one level, and thus use a prefix tree traversal.
+  if(coarsening && this->father == NULL) {
+    std::vector<HMatrix<T> *> stack;
+    stack.push_back(this);
+    while(!stack.empty()) {
+      HMatrix<T> * current = stack.back();
+      stack.pop_back();
+      if (current->isLeaf())
+        continue;
+      bool allRkLeaves = true;
+      size_t cumulative_size = 0;
+      for(int i = 0; i < current->nrChild(); ++i)
+      {
+        HMatrix<T>* child = current->getChild(i);
+        if(child != NULL && !child->isVoid())
+        {
+          if (child->isRkMatrix())
+            cumulative_size += (child->rows()->size() + child->cols()->size()) * child->approximateRank_;
+          else {
+            allRkLeaves = false;
+            break;
+          }
+        }
+      }
+      if (allRkLeaves)
+      {
+        approximateRank_ = admissibilityCondition->getApproximateRank(*(rows_), *(cols_));
+        if (approximateRank_ > 0 && (rows()->size() + cols()->size()) * approximateRank_ < cumulative_size)
+        {
+          for (int i = 0; i < current->nrChild(); i++)
+            current->removeChild(i);
+          current->children.clear();
+          current->rk(NULL);
+        }
+      }
+      for(int i = 0; i < current->nrChild(); ++i)
+      {
+        HMatrix<T>* child = current->getChild(i);
+        if(child != NULL && !child->isVoid() && !child->isLeaf())
+          stack.push_back(child);
+      }
+    }
+  }
+
   admissibilityCondition->clean(*(rows_));
   admissibilityCondition->clean(*(cols_));
 }
@@ -292,8 +338,6 @@ void HMatrix<T>::assemble(Assembly<T>& f, const AllocationObserver & ao) {
         this->getChild(i)->assemble(f, ao);
     }
     assembledRecurse();
-    if (coarsening)
-      coarsen();
   }
 }
 
@@ -360,8 +404,6 @@ void HMatrix<T>::assembleSymmetric(Assembly<T>& f,
           }
         }
         upper->assembledRecurse();
-        if (coarsening)
-          coarsen(upper);
       }
     }
     assembledRecurse();
