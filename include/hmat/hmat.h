@@ -421,25 +421,94 @@ struct hmat_block_compute_context_t {
  */
 typedef struct {
     /**
-     * The user context to pass to the prepare or simple_compute function. The default is NULL.
+     * The hmat_matrix_t matrix has previouly been initialized, it is a
+     * hierarchical structure containing inner nodes and leaves, which
+     * contain either a FullMatrix or an RkMatrix (compressed form).
+     *
+     * There are 4 different ways to perform a matrix assembly;
+     * the current recommended way is via advanced_compute, others
+     * are kept for legacy code.
+     *
+     *  1. assembly: this member is a pointer to an Assembly instance;
+     *       it provides an assemble method:
+     *
+     *   void assemble(const LocalSettings & settings,
+     *                 const ClusterTree & rows, const ClusterTree & cols,
+     *                 bool admissible,
+     *                 FullMatrix<T> * & fullMatrix, RkMatrix<T> * & rkMatrix,
+     *                 const AllocationObserver & ao)
+     *
+     *     If admissible argument is true, this method must compute the rkMatrix
+     *     argument, otherwise fullMatrix is computed.
+     *
+     *  2. simple_compute: this member is a pointer to a function
+     *
+     *   void interaction(void* user_context, int row, int col, void* result)
+     *
+     *     If block is full, interaction is called for all (row,col) tuple of
+     *     this block, the first argument user_context contains user data to
+     *     perform these computations.
+     *
+     *     If block is compressed, the compression algorithm will either retrieve
+     *     the full block (with SVD or ACA full algorithm) and compress it, or
+     *     retrieve only some rows and columns (ACA partial or ACA+ algorithms).
+     *     In all cases, it uses the interaction function.
+     *     Note that row and col are numbered here according to user numbering.
+     *
+     *  3. block_compute: this member is a pointer to a function
+     *
+     *   void compute(void* user_context, int block_row_start, int block_row_count,
+     *                int block_col_start, int block_col_count, void* block)
+     *
+     *     Moreover, user must also provide a prepare function.
+     *     It is called to fill up an hmat_block_info_t structure, and potentially
+     *     allocate hmat_block_info_t.user_data member (in which case
+     *     hmat_block_info_t.release_user_data function pointer must be provided).
+     *     If block_type is set to hmat_block_null in prepare function, nothing is
+     *     computed.
+     *     If block is full, compute is called on the whole block.
+     *
+     *     If block is compressed, the compression algorithm will either retrieve
+     *     the full block (with SVD or ACA full algorithm) and compress it, or
+     *     retrieve only some rows and columns (ACA partial or ACA+ algorithms).
+     *
+     *  4. advanced_compute: this member is a pointer to a function
+     *
+     *   void compute(struct hmat_block_compute_context_t*)
+     *
+     *     This case is similar to the previous one when block is full or compressed
+     *     with SVD or ACA full algorithms.  But with ACA partial or ACA+ algorithms,
+     *     assembly is done by material (called stratum), and interactions are summed
+     *     up.  The prepare function must set hmat_block_info_t.number_of_strata, and
+     *     a loop on strata is performed.
+     *
+     * Only one of advanced_compute, block_compute, simple_compute and
+     * assembly function pointers must be non null.
+     *
+     */
+    /** First scenario */
+    void * assembly;
+    /** Second scenario */
+    hmat_interaction_func_t simple_compute;
+    /** Third scenario */
+    hmat_compute_func_t block_compute;
+    /** Fourth scenario */
+    void (*advanced_compute)(struct hmat_block_compute_context_t*);
+
+    /**
+     * The user context used in all scenarii but the first one.  The default is NULL.
      */
     void* user_context;
-    /**
-     * The user context to pass to the prepare function.
-     * This is ignored if block_compute/advanced_compute is NULL.
-     */
+
+    /** Auxiliary method used by third and fourth scenarii */
     hmat_prepare_func_t prepare;
-    hmat_compute_func_t block_compute;
-    void (*advanced_compute)(struct hmat_block_compute_context_t*);
-    hmat_interaction_func_t simple_compute;
+
     /** Copy left lower values to the upper right of the matrix */
     int lower_symmetric;
     /** The type of factorization to do after this assembling. The default is hmat_factorization_none. */
     hmat_factorization_t factorization;
     /** NULL disable progress display. The default is to use the hmat progress internal implementation. */
     hmat_progress_t * progress;
-    /** The assembly scenario */
-    void * assembly;
 } hmat_assemble_context_t;
 
 /** Init a hmat_assemble_context_t with default values */
