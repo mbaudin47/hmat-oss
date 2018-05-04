@@ -83,7 +83,7 @@ typedef enum {
 /** The value of hmat_block_info_t.needed_memory when unset */
 #define HMAT_NEEDED_MEMORY_UNSET ((size_t)-1)
 
-struct hmat_block_info_t_struct {
+typedef struct hmat_block_info_struct {
     hmat_block_t block_type;
     /**
      * user data to pass from prepare function to compute function.
@@ -96,12 +96,21 @@ struct hmat_block_info_t_struct {
     /*! \brief Function provided by the user in hmat_prepare_func_t and used to quickly detect null rows
 
       It should be able to detect null rows very quickly, possibly without to compute them,
-      at the cost of possibly missing some null rows. It should return 1 for a null row,
-      O means that the row can be anything (null or non-null).
+      at the cost of possibly missing some null rows. It should return '\1' for a null row,
+      '\0' means that the row can be anything (null or non-null).
+      The block_row_offset argument is the row index within this block.
+
+      Note 1: We have to use hmat_block_info_struct in this definition, but
+              user prototype should be
+        char is_guaranteed_null_row(const hmat_block_info_t * block_info, int i, int stratum);
+
+      Note 2: It is convenient to store informations about null rows and columns for each stratum
+              inside the prepare function, so that this function only performs a lookup to quickly
+              determine whether this row is null or not.
     */
-    char (*is_guaranteed_null_row)(const struct hmat_block_info_t_struct * block_info, int i, int stratum);
-    /*! \brief Function provided by the user in hmat_prepare_func_t and used to quickly detect null columns (equivalent to  is_guaranteed_null_row) */
-    char (*is_guaranteed_null_col)(const struct hmat_block_info_t_struct * block_info, int i, int stratum);
+    char (*is_guaranteed_null_row)(const struct hmat_block_info_struct * block_info, int block_row_offset, int stratum);
+    /*! \brief Function provided by the user in hmat_prepare_func_t and used to quickly detect null columns (equivalent to is_guaranteed_null_row) */
+    char (*is_guaranteed_null_col)(const struct hmat_block_info_struct * block_info, int block_col_offset, int stratum);
     /**
      * The memory needed to assemble the block.
      * When set to HMAT_NEEDED_MEMORY_UNSET the hmat_prepare_func_t should reset it
@@ -111,9 +120,7 @@ struct hmat_block_info_t_struct {
     size_t needed_memory;
     /** the number of strata in the block */
     int number_of_strata;
-};
-
-typedef struct hmat_block_info_t_struct hmat_block_info_t;
+} hmat_block_info_t;
 
 /*! \brief Prepare block assembly.
  \param row_start starting row
@@ -480,7 +487,9 @@ typedef struct {
      *     with SVD or ACA full algorithms.  But with ACA partial or ACA+ algorithms,
      *     assembly is done by material (called stratum), and interactions are summed
      *     up.  The prepare function must set hmat_block_info_t.number_of_strata, and
-     *     a loop on strata is performed.
+     *     a loop on strata is performed.  By convention, if hmat_block_info_t.stratum
+     *     is -1, this callback must sum up interaction for all strata.  Otherwise, it
+     *     must compute only the interactions of the given stratum.
      *
      * Only one of advanced_compute, block_compute, simple_compute and
      * assembly function pointers must be non null.
@@ -500,7 +509,18 @@ typedef struct {
      */
     void* user_context;
 
-    /** Auxiliary method used by third and fourth scenarii */
+    /** Auxiliary method used by third and fourth scenarii
+      * This member is a pointer to function
+      *    void prepare(int row_start, int row_count, int col_start, int col_count,
+      *                 int *row_hmat2client, int *row_client2hmat,
+      *                 int *col_hmat2client, int *col_client2hmat,
+      *                 void *context,
+      *                 hmat_block_info_t * block_info)
+      * Eight first arguments are input arguments
+      * Block_info is an output argument, it is initialized by hmat, and this
+      * callback must fill it up; see comments in hmat_block_info_t.
+      * Context should be passed to hmat_block_info_t.user_data.
+      */
     hmat_prepare_func_t prepare;
 
     /** Copy left lower values to the upper right of the matrix */
