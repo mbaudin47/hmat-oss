@@ -749,16 +749,25 @@ template<typename T> RkMatrix<typename Types<T>::dp>* compress(
     }
     RkMatrix<dp_t>* rk = compressOneStratum(method, block);
     rk->truncate(rk->approx.assemblyEpsilon);
-    for(block.stratum = 1; block.stratum < nloop; block.stratum++) {
+    if(nloop > 1) {
         assert(method == AcaPartial || method == AcaPlus);
-        RkMatrix<dp_t>* stratumRk = compressOneStratum(method, block);
-        if (stratumRk->rank()>0) {
-          RkMatrix<dp_t>* sumRk = rk->formattedAddParts(&Constants<dp_t>::pone, &stratumRk, 1, true);
-          delete rk;
-          rk = sumRk;
-          //        rk->truncate(stratumRk->approx.assemblyEpsilon); We rather use the truncate in formattedAddParts() which is done only if needed
+        RkMatrix<dp_t>** rk_parts = new RkMatrix<dp_t>*[nloop - 1];
+        int nrk_parts = 0;
+        for(block.stratum = 1; block.stratum < nloop; block.stratum++) {
+            RkMatrix<dp_t>* stratumRk = compressOneStratum(method, block);
+            if (stratumRk->rank()>0) {
+                rk_parts[nrk_parts] = stratumRk;
+                ++ nrk_parts;
+            }
+            else
+                delete stratumRk;
         }
-        delete stratumRk;
+        RkMatrix<dp_t>* sumRk = rk->formattedAddParts(&Constants<dp_t>::pone, rk_parts, nrk_parts, true);
+        for(int i = 0; i < nrk_parts; i++)
+            delete rk_parts[i];
+        delete [] rk_parts;
+        delete rk;
+        rk = sumRk;
     }
     return rk;
 }
