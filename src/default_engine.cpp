@@ -166,16 +166,6 @@ void DefaultEngine<T>::gemm(char transA, char transB, T alpha,
 }
 
 template<typename T>
-void DefaultEngine<T>::addIdentity(T alpha) {
-  hmat->addIdentity(alpha);
-}
-
-template<typename T>
-void DefaultEngine<T>::scale(T alpha) {
-  hmat->scale(alpha);
-}
-
-template<typename T>
 void DefaultEngine<T>::addRand(double epsilon) {
   hmat->addRand(epsilon);
 }

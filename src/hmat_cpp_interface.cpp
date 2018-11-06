@@ -204,19 +204,17 @@ template<typename T, template <typename> class E>
 void HMatInterface<T, E>::scale(T alpha) {
   DISABLE_THREADING_IN_BLOCK;
   DECLARE_CONTEXT;
-  engine_.scale(alpha);
+  engine_.hmat->scale(alpha);
 }
 
 template<typename T, template <typename> class E>
 void HMatInterface<T, E>::addIdentity(T alpha) {
-  DISABLE_THREADING_IN_BLOCK;
   DECLARE_CONTEXT;
-  engine_.addIdentity(alpha);
+  engine_.hmat->addIdentity(alpha);
 }
 
 template<typename T, template <typename> class E>
 void HMatInterface<T, E>::addRand(double epsilon) {
-  DISABLE_THREADING_IN_BLOCK;
   DECLARE_CONTEXT;
   engine_.addRand(epsilon);
 }
