@@ -217,10 +217,6 @@ void DefaultEngine<T>::createPostcriptFile(const std::string& filename) const {
     hmat->createPostcriptFile(filename);
 }
 
-template<typename T> double DefaultEngine<T>::norm() const {
-    return sqrt(hmat->normSqr());
-}
-
 template<typename T> void DefaultEngine<T>::copy(DefaultEngine<T> & result, bool structOnly) const {
     result.hmat = hmat->copyStructure();
     if(!structOnly)

@@ -197,7 +197,7 @@ template<typename T, template <typename> class E>
 double HMatInterface<T, E>::norm() const {
   DISABLE_THREADING_IN_BLOCK;
   DECLARE_CONTEXT;
-  return engine_.norm();
+  return engine_.hmat->norm();
 }
 
 template<typename T, template <typename> class E>

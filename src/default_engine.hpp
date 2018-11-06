@@ -58,7 +58,6 @@ public:
   void transpose();
   void applyOnLeaf(const hmat::LeafProcedure<hmat::HMatrix<T> >&f);
   void createPostcriptFile(const std::string& filename) const;
-  double norm() const;
   void progress(hmat_progress_t * p){ progress_ = p; }
   HMatrix<T> * data() const { return hmat; }
   void info(hmat_info_t & i) const { hmat->info(i); }
