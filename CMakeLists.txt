@@ -78,11 +78,13 @@ if(NOT HMAT_TIMELINE)
 endif()
 
 # lib HMAT
-if(HMAT_OSS_STATIC AND BUILD_SHARED_LIBS)
-    add_library(${PROJECT_NAME} STATIC ${HMAT_SOURCES})
+if(HMAT_LIBRARIES)
+    add_library(${PROJECT_NAME} OBJECT ${HMAT_SOURCES})
     set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    set(${PROJECT_NAME}_VISIBILITY "PUBLIC")
 else()
     add_library(${PROJECT_NAME} ${HMAT_SOURCES})
+    set(${PROJECT_NAME}_VISIBILITY "PRIVATE")
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES DEFINE_SYMBOL HMAT_DLL_EXPORTS)
@@ -118,7 +120,7 @@ include(CheckLibraryExists)
 
 check_library_exists("m" sqrt "" HAVE_LIBM)
 if(HAVE_LIBM)
-    target_link_libraries(${PROJECT_NAME} PRIVATE m)
+    target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_VISIBILITY} m)
     # Examples will also have to be linked against libm
     set(LIBM_TARGET m)
 endif()
@@ -139,13 +141,8 @@ if(HMAT_DISABLE_OPENMP)
         # OpenMP requires that consumers also link against it, this is why
         # it is public; and find_dependency(OpenMP) is added into HMatConfig.cmake
         # to ensure that consumers also define OpenMP::OpenMP_C target.
-        if(TARGET OpenMP::OpenMP_C)  # This target is provided only for CMake >= 3.9
-            target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>")
-            target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_C)
-        else()
-            target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>")
-            target_link_libraries(${PROJECT_NAME} PUBLIC "${OpenMP_C_FLAGS}")
-        endif()
+        target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>")
+        target_link_libraries(${PROJECT_NAME} PUBLIC "${OpenMP_C_FLAGS}")
     endif()
 endif()
 
@@ -155,19 +152,8 @@ if(HMAT_JEMALLOC)
     find_package(JeMalloc REQUIRED)
     if(JEMALLOC_FOUND)
         set(HAVE_JEMALLOC TRUE)
-        if(HMAT_OSS_STATIC AND BUILD_SHARED_LIBS)
-            target_include_directories(${PROJECT_NAME} PRIVATE "${JEMALLOC_INCLUDE_DIR}")
-            target_link_libraries(${PROJECT_NAME} PRIVATE "${JEMALLOC_LIBRARIES}")
-        else()
-            if(NOT TARGET HMAT::jemalloc)
-                add_library(HMAT::jemalloc UNKNOWN IMPORTED)
-                set_target_properties(HMAT::jemalloc PROPERTIES
-                    IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                    INTERFACE_INCLUDE_DIRECTORIES "${JEMALLOC_INCLUDE_DIR}"
-                    IMPORTED_LOCATION "${JEMALLOC_LIBRARIES}")
-            endif()
-            target_link_libraries(${PROJECT_NAME} PRIVATE HMAT::jemalloc)
-        endif()
+        target_include_directories(${PROJECT_NAME} PRIVATE "${JEMALLOC_INCLUDE_DIR}")
+        target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_VISIBILITY} "${JEMALLOC_LIBRARIES}")
     endif()
 endif()
 
@@ -190,7 +176,7 @@ if(MKL_FOUND)
   set(CBLAS_INCLUDE_DIR ${MKL_INCLUDE_DIRS})
   # The start-group/end-group flags must be at the end of the
   # link command line, so we must use target_link_libraries not, CMAKE_SHARED_XXX_FLAGS
-  target_link_libraries(${PROJECT_NAME} PRIVATE ${MKL_LINKER_FLAGS})
+  target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_VISIBILITY} ${MKL_LINKER_FLAGS})
 endif()
 
 option(USE_DEBIAN_OPENBLAS "On Debian, link to openblas instead of generic blas." ON)
@@ -251,7 +237,7 @@ endif()
 
 if(CMAKE_VERSION VERSION_GREATER 3.12)
     if(BUILD_SHARED_LIBS)
-        target_link_options(${PROJECT_NAME} PRIVATE "${LAPACK_LINKER_FLAGS};${BLAS_LINKER_FLAGS}")
+        target_link_options(${PROJECT_NAME} ${${PROJECT_NAME}_VISIBILITY} "${LAPACK_LINKER_FLAGS};${BLAS_LINKER_FLAGS}")
     else()
         set_target_properties(${PROJECT_NAME} PROPERTIES STATIC_LIBRARY_OPTIONS "${LAPACK_LINKER_FLAGS};${BLAS_LINKER_FLAGS}")
     endif()
@@ -259,12 +245,8 @@ else()
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "${LAPACK_LINKER_FLAGS} ${BLAS_LINKER_FLAGS}")
 endif()
 
-target_link_libraries(${PROJECT_NAME}
-    PRIVATE
-        ${LAPACK_LIBRARIES}
-        ${CBLAS_LIBRARIES}
-        ${BLAS_LIBRARIES}
-)
+target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_VISIBILITY}
+        ${LAPACK_LIBRARIES} ${CBLAS_LIBRARIES} ${BLAS_LIBRARIES})
 
 # ========================
 # Compiler flags
