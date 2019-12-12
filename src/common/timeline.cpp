@@ -11,7 +11,7 @@ namespace hmat {
 #endif
 
 Timeline::Task::~Task() {
-    if(workerId_ >= 0) {
+    if(workerId_ >= 0 && timeline_.enabled_) {
         timestamp();
         fwrite(buffer, buffer_size, 1, timeline_.files_[workerId_]);
     }
@@ -41,10 +41,12 @@ bool Timeline::Task::init(int workerId, Operation op){
 }
 
 void Timeline::Task::addBlock(const IndexSet * rows, const IndexSet * cols) {
-    write(rows->offset());
-    write(rows->size());
-    write(cols->offset());
-    write(cols->size());
+    if(timeline_.enabled_) {
+        write(rows->offset());
+        write(rows->size());
+        write(cols->offset());
+        write(cols->size());
+    }
 }
 
 void Timeline::init(int numberOfWorker, int rank, bool onlyWorker) {
@@ -72,6 +74,11 @@ void Timeline::init(int numberOfWorker, int rank, bool onlyWorker) {
 
 void Timeline::setPackEnabled(bool enabled) {
     packEnabled_ = enabled;
+}
+
+void Timeline::setEnabled(bool enabled) {
+    enabled_ = enabled && !files_.empty();
+    flush();
 }
 
 Timeline::~Timeline() {

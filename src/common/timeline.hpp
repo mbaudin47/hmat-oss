@@ -92,6 +92,7 @@ class Timeline {
 #endif
     /** Track pack and unpack */
     void setPackEnabled(bool);
+    void setEnabled(bool);
     static Timeline & instance() {
         static Timeline instance;
         return instance;
