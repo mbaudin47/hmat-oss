@@ -40,6 +40,11 @@ class ClusteringAlgorithm;
 class AxisAlignedBoundingBox;
 
 class ClusterTreeBuilder {
+  void divide_recursive(ClusterTree& current, int axis) const;
+  void clean_recursive(ClusterTree& current) const;
+  ClusteringAlgorithm* getAlgorithm(int depth) const;
+  // Sequence of algorithms applied
+  std::list<std::pair<int, ClusteringAlgorithm*> > algo_;
 public:
   explicit ClusterTreeBuilder(const ClusteringAlgorithm& algo);
   ~ClusterTreeBuilder();
@@ -54,15 +59,7 @@ public:
       \return a ClusterTree instance
    */
   ClusterTree* build(const DofCoordinates& coordinates, int* group_index = NULL) const;
-
-private:
-  void divide_recursive(ClusterTree& current, int axis) const;
-  void clean_recursive(ClusterTree& current) const;
-  ClusteringAlgorithm* getAlgorithm(int depth) const;
-
-private:
-  // Sequence of algorithms applied
-  std::list<std::pair<int, ClusteringAlgorithm*> > algo_;
+  static void (*postprocessHook)(ClusterTree*);
 };
 
 class ClusteringAlgorithm

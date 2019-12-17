@@ -368,6 +368,8 @@ ClusterTreeBuilder::build(const DofCoordinates& coordinates, int* group_index) c
   ClusterTree* rootNode = new ClusterTree(dofData);
 
   divide_recursive(*rootNode, -1);
+  if(postprocessHook != NULL)
+    postprocessHook(rootNode);
   clean_recursive(*rootNode);
   // Update reverse mapping
   int* indices_i2e = rootNode->data.indices();
@@ -440,6 +442,8 @@ ClusterTreeBuilder::divide_recursive(ClusterTree& current, int currentAxis) cons
   }
 }
 
+void (*ClusterTreeBuilder::postprocessHook)(ClusterTree*) = NULL;
+
 SpanClusteringAlgorithm::SpanClusteringAlgorithm(
     const ClusteringAlgorithm &algo, double ratio):
     algo_(algo), ratio_(ratio){
@@ -485,5 +489,4 @@ int SpanClusteringAlgorithm::partition(
         children.push_back(largeSpanCluster);
     return dim;
 }
-
 }  // end namespace hmat
