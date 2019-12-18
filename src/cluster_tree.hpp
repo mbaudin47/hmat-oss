@@ -181,7 +181,7 @@ public:
 
   /*! \brief Return a copy to this.
    */
-  ClusterTree* copy(const ClusterTree* copyFather=NULL) const;
+  ClusterTree* copy(const ClusterTree* copyFather=NULL, int offset=0) const;
 
   /*! \brief Return a short string describing the content of this ClusterTree for debug (like: "[320, 452]")
     */

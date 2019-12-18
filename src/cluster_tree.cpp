@@ -170,14 +170,13 @@ ClusterTree::slice(int offset, int size) const
   return result;
 }
 
-ClusterTree* ClusterTree::copy(const ClusterTree* copyFather) const {
+ClusterTree* ClusterTree::copy(const ClusterTree* copyFather, int offset) const {
   ClusterTree* result = NULL;
   if (!copyFather) {
-    // La racine doit s'occuper le tableau des points et le mapping.
     result = new ClusterTree(data.dofData_->copy());
     copyFather = result;
   } else {
-    result = copyFather->slice(data.offset(), data.size());
+    result = copyFather->slice(data.offset() + offset, data.size());
   }
   if (!isLeaf()) {
     for (int i=0 ; i<nrChild(); i++)
