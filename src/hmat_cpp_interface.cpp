@@ -66,6 +66,8 @@ void HMatInterface<T>::assemble(Assembly<T>& f, SymmetryFlag sym, bool,
   DECLARE_CONTEXT;
   engine_->progress(progress);
   engine_->assembly(f, sym, ownAssembly);
+  if(engine_->hmat->rows()->size() == engine_->hmat->cols()->size())
+    dumpTreeToFile("assembled.json");
 }
 
 template<typename T>
@@ -78,6 +80,7 @@ void HMatInterface<T>::factorize(hmat_factorization_t t, hmat_progress_t * progr
   engine_->factorization(t);
   factorizationType = t;
   engine_->hmat->checkStructure();
+  dumpTreeToFile("fatorized.json");
 }
 
 template<typename T>
